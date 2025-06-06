@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { CalendarIcon } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -54,6 +56,8 @@ export function BookingModal({
   hotelName,
   onBookingSuccess,
 }: BookingModalProps) {
+  const { data: session } = useSession()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [checkInDate, setCheckInDate] = useState<Date | undefined>(new Date())
   const [checkOutDate, setCheckOutDate] = useState<Date | undefined>(
@@ -76,7 +80,12 @@ export function BookingModal({
   }
 
   const handleBooking = async () => {
-    console.log("Booking button clicked!") // Debug log
+    if (!session) {
+      router.push("/auth/signin")
+      return
+    }
+
+    console.log("Booking button clicked!")
 
     if (!checkInDate || !checkOutDate) {
       setError("Please select check-in and check-out dates")
@@ -92,10 +101,10 @@ export function BookingModal({
     setError("")
 
     try {
-      console.log("Sending booking request...") // Debug log
+      console.log("Sending booking request...")
 
       const bookingData = {
-        user_id: 1, // For demo purposes
+        user_id: Number.parseInt(session.user.id),
         hotel_id: hotelId,
         room_id: roomId,
         check_in_date: formatDateForAPI(checkInDate),
@@ -105,7 +114,7 @@ export function BookingModal({
         special_requests: specialRequests,
       }
 
-      console.log("Booking data:", bookingData) // Debug log
+      console.log("Booking data:", bookingData)
 
       const response = await fetch("/api/bookings", {
         method: "POST",
@@ -115,16 +124,16 @@ export function BookingModal({
         body: JSON.stringify(bookingData),
       })
 
-      console.log("Response status:", response.status) // Debug log
+      console.log("Response status:", response.status)
 
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("Booking error:", errorData) // Debug log
+        console.error("Booking error:", errorData)
         throw new Error(errorData.error || "Failed to create booking")
       }
 
       const booking = await response.json()
-      console.log("Booking created:", booking) // Debug log
+      console.log("Booking created:", booking)
 
       setSuccess(true)
 
@@ -199,12 +208,16 @@ export function BookingModal({
         <Button
           className="gap-2"
           onClick={() => {
-            console.log("Book Now button clicked!") // Debug log
+            if (!session) {
+              router.push("/auth/signin")
+              return
+            }
+            console.log("Book Now button clicked!")
             setOpen(true)
           }}
         >
           <CalendarIcon className="h-4 w-4" />
-          Book Now
+          {session ? "Book Now" : "Sign In to Book"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">

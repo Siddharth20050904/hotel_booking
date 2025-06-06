@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Calendar, Users, Clock } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -25,19 +27,29 @@ interface Booking {
 }
 
 export function UserBookings() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
+    if (status === "loading") return // Still loading session
+
+    if (!session) {
+      router.push("/auth/signin")
+      return
+    }
+
     fetchBookings()
-  }, [])
+  }, [session, status, router])
 
   const fetchBookings = async () => {
+    if (!session?.user?.id) return
+
     try {
       setLoading(true)
-      // For demo purposes, using user ID 1. In real app, this would come from authentication
-      const response = await fetch("/api/bookings?userId=1")
+      const response = await fetch(`/api/bookings?userId=${session.user.id}`)
 
       if (!response.ok) {
         throw new Error("Failed to fetch bookings")
@@ -78,12 +90,16 @@ export function UserBookings() {
     })
   }
 
-  if (loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <p>Loading your bookings...</p>
       </div>
     )
+  }
+
+  if (!session) {
+    return null // Will redirect to sign in
   }
 
   if (error) {

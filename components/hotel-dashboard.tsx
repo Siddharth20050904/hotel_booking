@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, MapPin, SlidersHorizontal, Star, Database, Calendar } from "lucide-react"
+import { Search, MapPin, SlidersHorizontal, Star, Database } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { UserMenu } from "@/components/user-menu"
 
 export function HotelDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -96,22 +97,14 @@ export function HotelDashboard() {
           <h1 className="text-3xl font-bold">Find Your Stay</h1>
           <p className="text-muted-foreground">Discover and book the perfect hotel</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
           {error && (
             <Button onClick={initializeDatabase} disabled={loading} className="gap-2">
               <Database className="h-4 w-4" />
               {loading ? "Initializing..." : "Initialize Database"}
             </Button>
           )}
-          <Link href="/bookings">
-            <Button variant="outline" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              My Bookings
-            </Button>
-          </Link>
-          <Link href="/settings">
-            <Button variant="outline">Settings</Button>
-          </Link>
+          <UserMenu />
         </div>
       </header>
 

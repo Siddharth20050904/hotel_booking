@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { ChevronLeft, Save } from "lucide-react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -14,27 +16,39 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function SettingsForm() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [formState, setFormState] = useState({
-    // Personal details
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-
-    // IDs
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
     idType: "passport",
-    idNumber: "AB123456",
-
-    // Preferences
-    preferredCurrency: "usd",
+    idNumber: "",
+    preferredCurrency: "USD",
     preferredLanguage: "english",
     newsletterSubscription: true,
     specialOffers: true,
-    roomPreferences: "I prefer a quiet room away from elevators, with a king-sized bed if possible.",
-    dietaryRestrictions: "No nuts, vegetarian options preferred",
+    roomPreferences: "",
+    dietaryRestrictions: "",
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    if (status === "loading") return
+
+    if (!session) {
+      router.push("/auth/signin")
+      return
+    }
+
+    loadUserData()
+  }, [session, status, router])
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormState((prev) => ({
@@ -43,14 +57,11 @@ export function SettingsForm() {
     }))
   }
 
-  useEffect(() => {
-    loadUserData()
-  }, [])
-
   const loadUserData = async () => {
+    if (!session?.user?.id) return
+
     try {
-      // For demo purposes, we'll use user ID 1
-      const response = await fetch("/api/users/1")
+      const response = await fetch(`/api/users/${session.user.id}`)
       if (response.ok) {
         const userData = await response.json()
         setFormState({
@@ -60,7 +71,7 @@ export function SettingsForm() {
           phone: userData.phone || "",
           idType: userData.id_type || "passport",
           idNumber: userData.id_number || "",
-          preferredCurrency: userData.preferred_currency || "usd",
+          preferredCurrency: userData.preferred_currency || "USD",
           preferredLanguage: userData.preferred_language || "english",
           newsletterSubscription: userData.newsletter_subscription ?? true,
           specialOffers: userData.special_offers ?? true,
@@ -70,16 +81,21 @@ export function SettingsForm() {
       }
     } catch (error) {
       console.error("Error loading user data:", error)
+      setError("Failed to load user data")
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!session?.user?.id) return
+
+    setLoading(true)
+    setError("")
+    setSuccess(false)
+
     try {
-      // For demo purposes, we'll use user ID 1
-      // In a real app, this would come from authentication
-      const response = await fetch("/api/users/1", {
+      const response = await fetch(`/api/users/${session.user.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -100,14 +116,29 @@ export function SettingsForm() {
       })
 
       if (response.ok) {
-        alert("Settings saved successfully!")
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 3000)
       } else {
-        alert("Failed to save settings")
+        setError("Failed to save settings")
       }
     } catch (error) {
       console.error("Error saving settings:", error)
-      alert("Failed to save settings")
+      setError("Failed to save settings")
+    } finally {
+      setLoading(false)
     }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null // Will redirect to sign in
   }
 
   return (
@@ -120,6 +151,18 @@ export function SettingsForm() {
           </Button>
         </Link>
       </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert className="mb-6">
+          <AlertDescription>Settings saved successfully!</AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="personal" className="w-full">
         <TabsList className="grid grid-cols-3 mb-8">
@@ -157,12 +200,8 @@ export function SettingsForm() {
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formState.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
-                  />
+                  <Input id="email" type="email" value={formState.email} disabled className="bg-muted" />
+                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                 </div>
 
                 <div className="space-y-2">
@@ -203,12 +242,6 @@ export function SettingsForm() {
                     onChange={(e) => handleChange("idNumber", e.target.value)}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="idUpload">Upload ID Document (Optional)</Label>
-                  <Input id="idUpload" type="file" />
-                  <p className="text-xs text-muted-foreground mt-1">Accepted formats: PDF, JPG, PNG (max 5MB)</p>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -231,10 +264,10 @@ export function SettingsForm() {
                         <SelectValue placeholder="Select currency" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="usd">USD ($)</SelectItem>
-                        <SelectItem value="eur">EUR (€)</SelectItem>
-                        <SelectItem value="gbp">GBP (£)</SelectItem>
-                        <SelectItem value="jpy">JPY (¥)</SelectItem>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="EUR">EUR (€)</SelectItem>
+                        <SelectItem value="GBP">GBP (£)</SelectItem>
+                        <SelectItem value="JPY">JPY (¥)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -311,9 +344,9 @@ export function SettingsForm() {
           </TabsContent>
 
           <div className="mt-6 flex justify-end">
-            <Button type="submit" className="gap-2">
+            <Button type="submit" className="gap-2" disabled={loading}>
               <Save className="h-4 w-4" />
-              Save Settings
+              {loading ? "Saving..." : "Save Settings"}
             </Button>
           </div>
         </form>
