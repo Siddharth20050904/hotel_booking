@@ -1,16 +1,11 @@
 import NextAuth from "next-auth"
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import GoogleProvider from "next-auth/providers/google"
 import { sql } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -19,15 +14,23 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Missing credentials")
           return null
         }
 
         try {
+          console.log("🔍 Attempting to authenticate user:", credentials.email)
+
+          // Test database connection first
+          await sql`SELECT 1 as test`
+          console.log("✅ Database connection successful for auth")
+
           const users = await sql`
             SELECT * FROM users WHERE email = ${credentials.email}
           `
 
           if (users.length === 0) {
+            console.log("❌ User not found:", credentials.email)
             return null
           }
 
@@ -35,14 +38,18 @@ export const authOptions: NextAuthOptions = {
 
           // Check if user has a password (for credential-based login)
           if (!user.password) {
+            console.log("❌ User has no password set:", credentials.email)
             return null
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
+            console.log("❌ Invalid password for user:", credentials.email)
             return null
           }
+
+          console.log("✅ User authenticated successfully:", credentials.email)
 
           return {
             id: user.id.toString(),
@@ -52,65 +59,66 @@ export const authOptions: NextAuthOptions = {
             lastName: user.last_name,
           }
         } catch (error) {
-          console.error("Auth error:", error)
+          console.error("❌ Auth error:", error)
+          // Return null instead of throwing to prevent 500 errors
           return null
         }
       },
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      if (account?.provider === "google") {
-        try {
-          // Check if user exists
-          const existingUsers = await sql`
-            SELECT * FROM users WHERE email = ${user.email}
-          `
-
-          if (existingUsers.length === 0) {
-            // Create new user from Google profile
-            const newUser = await sql`
-              INSERT INTO users (email, first_name, last_name, preferred_currency, preferred_language)
-              VALUES (${user.email}, ${profile?.given_name || user.name?.split(" ")[0] || "User"}, ${profile?.family_name || user.name?.split(" ")[1] || ""}, 'USD', 'english')
-              RETURNING *
-            `
-            user.id = newUser[0].id.toString()
-          } else {
-            user.id = existingUsers[0].id.toString()
-          }
-        } catch (error) {
-          console.error("Error creating/finding user:", error)
-          return false
-        }
-      }
-      return true
-    },
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.firstName = user.firstName
-        token.lastName = user.lastName
+      try {
+        if (user) {
+          token.id = user.id
+          token.firstName = user.firstName
+          token.lastName = user.lastName
+        }
+        return token
+      } catch (error) {
+        console.error("❌ JWT callback error:", error)
+        return token
       }
-      return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        session.user.firstName = token.firstName as string
-        session.user.lastName = token.lastName as string
+      try {
+        if (token) {
+          session.user.id = token.id as string
+          session.user.firstName = token.firstName as string
+          session.user.lastName = token.lastName as string
+        }
+        return session
+      } catch (error) {
+        console.error("❌ Session callback error:", error)
+        return session
       }
-      return session
     },
   },
   pages: {
     signIn: "/auth/signin",
     signUp: "/auth/signup",
+    error: "/auth/error", // Add custom error page
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || "your-fallback-secret-key-change-in-production",
   debug: process.env.NODE_ENV === "development",
+  // Add error handling
+  logger: {
+    error(code, metadata) {
+      console.error("NextAuth Error:", code, metadata)
+    },
+    warn(code) {
+      console.warn("NextAuth Warning:", code)
+    },
+    debug(code, metadata) {
+      if (process.env.NODE_ENV === "development") {
+        console.log("NextAuth Debug:", code, metadata)
+      }
+    },
+  },
 }
 
 const handler = NextAuth(authOptions)

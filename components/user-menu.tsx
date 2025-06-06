@@ -17,10 +17,22 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function UserMenu() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [loading, setLoading] = useState(false)
 
-  if (!session) {
+  // Handle loading state
+  if (status === "loading") {
+    return (
+      <div className="flex gap-2">
+        <Button variant="outline" disabled>
+          Loading...
+        </Button>
+      </div>
+    )
+  }
+
+  // Handle authentication errors
+  if (status === "unauthenticated" || !session) {
     return (
       <div className="flex gap-2">
         <Link href="/auth/signin">
@@ -34,8 +46,14 @@ export function UserMenu() {
   }
 
   const handleSignOut = async () => {
-    setLoading(true)
-    await signOut({ callbackUrl: "/" })
+    try {
+      setLoading(true)
+      await signOut({ callbackUrl: "/" })
+    } catch (error) {
+      console.error("❌ Sign out error:", error)
+      // Force redirect even if signOut fails
+      window.location.href = "/"
+    }
   }
 
   const getInitials = (name: string) => {

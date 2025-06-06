@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 
 export function SignInForm() {
   const [email, setEmail] = useState("")
@@ -25,33 +24,43 @@ export function SignInForm() {
     setError("")
 
     try {
+      console.log("🔐 Attempting sign in for:", email)
+
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       })
 
+      console.log("🔐 Sign in result:", result)
+
       if (result?.error) {
-        setError("Invalid email or password")
-      } else {
+        console.error("❌ Sign in error:", result.error)
+
+        // Handle different error types
+        switch (result.error) {
+          case "CredentialsSignin":
+            setError("Invalid email or password")
+            break
+          case "Configuration":
+            setError("Authentication service is temporarily unavailable. Please try again later.")
+            break
+          default:
+            setError("An error occurred during sign in. Please try again.")
+        }
+      } else if (result?.ok) {
+        console.log("✅ Sign in successful")
         // Refresh session and redirect
         await getSession()
         router.push("/")
         router.refresh()
+      } else {
+        setError("An unexpected error occurred. Please try again.")
       }
     } catch (error) {
-      setError("An error occurred. Please try again.")
+      console.error("❌ Sign in exception:", error)
+      setError("Network error. Please check your connection and try again.")
     } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true)
-    try {
-      await signIn("google", { callbackUrl: "/" })
-    } catch (error) {
-      setError("Failed to sign in with Google")
       setLoading(false)
     }
   }
@@ -68,19 +77,6 @@ export function SignInForm() {
           </Alert>
         )}
 
-        <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" disabled={loading}>
-          Continue with Google
-        </Button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -91,6 +87,7 @@ export function SignInForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
+              placeholder="Enter your email"
             />
           </div>
 
@@ -103,6 +100,7 @@ export function SignInForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              placeholder="Enter your password"
             />
           </div>
 
@@ -110,6 +108,12 @@ export function SignInForm() {
             {loading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
+
+        <div className="text-center text-sm text-muted-foreground">
+          <p>Demo credentials:</p>
+          <p>Email: demo@example.com</p>
+          <p>Password: demo123</p>
+        </div>
       </CardContent>
     </Card>
   )

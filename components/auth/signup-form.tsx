@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 
 export function SignUpForm() {
   const [formData, setFormData] = useState({
@@ -87,16 +86,6 @@ export function SignUpForm() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true)
-    try {
-      await signIn("google", { callbackUrl: "/" })
-    } catch (error) {
-      setError("Failed to sign in with Google")
-      setLoading(false)
-    }
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -109,19 +98,6 @@ export function SignUpForm() {
           </Alert>
         )}
 
-        <Button onClick={handleGoogleSignIn} variant="outline" className="w-full" disabled={loading}>
-          Continue with Google
-        </Button>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -133,6 +109,7 @@ export function SignUpForm() {
                 onChange={handleChange}
                 required
                 disabled={loading}
+                placeholder="Enter your first name"
               />
             </div>
             <div className="space-y-2">
@@ -144,6 +121,7 @@ export function SignUpForm() {
                 onChange={handleChange}
                 required
                 disabled={loading}
+                placeholder="Enter your last name"
               />
             </div>
           </div>
@@ -158,6 +136,7 @@ export function SignUpForm() {
               onChange={handleChange}
               required
               disabled={loading}
+              placeholder="Enter your email"
             />
           </div>
 
@@ -171,6 +150,7 @@ export function SignUpForm() {
               onChange={handleChange}
               required
               disabled={loading}
+              placeholder="Enter your password (min 6 characters)"
             />
           </div>
 
@@ -184,6 +164,7 @@ export function SignUpForm() {
               onChange={handleChange}
               required
               disabled={loading}
+              placeholder="Confirm your password"
             />
           </div>
 

@@ -2,8 +2,16 @@ import { NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 
 export async function POST() {
+  console.log("🚀 Starting database initialization...")
+
   try {
+    // Test connection first
+    console.log("🔌 Testing database connection...")
+    await sql`SELECT 1 as test`
+    console.log("✅ Database connection successful")
+
     // Create users table
+    console.log("👥 Creating users table...")
     await sql`
       CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
@@ -19,12 +27,15 @@ export async function POST() {
           special_offers BOOLEAN DEFAULT true,
           room_preferences TEXT,
           dietary_restrictions TEXT,
+          password VARCHAR(255),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
+    console.log("✅ Users table created")
 
     // Create hotels table
+    console.log("🏨 Creating hotels table...")
     await sql`
       CREATE TABLE IF NOT EXISTS hotels (
           id SERIAL PRIMARY KEY,
@@ -45,8 +56,10 @@ export async function POST() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
+    console.log("✅ Hotels table created")
 
     // Create rooms table
+    console.log("🛏️ Creating rooms table...")
     await sql`
       CREATE TABLE IF NOT EXISTS rooms (
           id SERIAL PRIMARY KEY,
@@ -63,8 +76,10 @@ export async function POST() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
+    console.log("✅ Rooms table created")
 
     // Create bookings table
+    console.log("📅 Creating bookings table...")
     await sql`
       CREATE TABLE IF NOT EXISTS bookings (
           id SERIAL PRIMARY KEY,
@@ -81,8 +96,10 @@ export async function POST() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
+    console.log("✅ Bookings table created")
 
     // Create reviews table
+    console.log("⭐ Creating reviews table...")
     await sql`
       CREATE TABLE IF NOT EXISTS reviews (
           id SERIAL PRIMARY KEY,
@@ -96,59 +113,218 @@ export async function POST() {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `
+    console.log("✅ Reviews table created")
 
-    // Insert sample user
-    await sql`
-      INSERT INTO users (email, first_name, last_name, phone, id_type, id_number, preferred_currency, preferred_language) 
-      VALUES ('demo@example.com', 'Demo', 'User', '+1-555-0123', 'passport', 'AB123456', 'USD', 'english')
-      ON CONFLICT (email) DO NOTHING
+    // Check if data already exists
+    console.log("📊 Checking existing data...")
+    const existingUsers = await sql`SELECT COUNT(*) as count FROM users`
+    const existingHotels = await sql`SELECT COUNT(*) as count FROM hotels`
+
+    console.log(`Found ${existingUsers[0].count} users and ${existingHotels[0].count} hotels`)
+
+    // Insert demo user if none exists
+    if (Number(existingUsers[0].count) === 0) {
+      console.log("👤 Creating demo user...")
+      await sql`
+        INSERT INTO users (email, first_name, last_name, phone, id_type, id_number, preferred_currency, preferred_language, password) 
+        VALUES ('demo@example.com', 'Demo', 'User', '+1-555-0123', 'passport', 'AB123456', 'USD', 'english', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBMY9f5zqiUm4W')
+      `
+      console.log("✅ Demo user created")
+    } else {
+      console.log("ℹ️ Demo user already exists")
+    }
+
+    // Insert sample hotels if none exist
+    if (Number(existingHotels[0].count) === 0) {
+      console.log("🏨 Inserting sample hotels...")
+
+      // Insert hotels one by one to avoid complex array syntax issues
+      const hotelData = [
+        {
+          name: "Grand Plaza Hotel",
+          description: "Luxury hotel in the heart of downtown with world-class amenities",
+          location: "Downtown",
+          address: "123 Main Street",
+          city: "New York",
+          country: "USA",
+          rating: 4.5,
+          total_reviews: 1250,
+          amenities: ["Free WiFi", "Pool", "Spa", "Gym", "Restaurant"],
+          couple_friendly: true,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPkdyYW5kIFBsYXphPC90ZXh0Pgo8L3N2Zz4K",
+        },
+        {
+          name: "Seaside Resort",
+          description: "Beautiful beachfront resort with stunning ocean views",
+          location: "Beachfront",
+          address: "456 Ocean Drive",
+          city: "Miami",
+          country: "USA",
+          rating: 4.8,
+          total_reviews: 890,
+          amenities: ["Ocean View", "Restaurant", "Gym", "Beach Access", "Pool"],
+          couple_friendly: true,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMDc5MkVGIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPlNlYXNpZGUgUmVzb3J0PC90ZXh0Pgo8L3N2Zz4K",
+        },
+        {
+          name: "City Comfort Inn",
+          description: "Comfortable and affordable accommodation in midtown",
+          location: "Midtown",
+          address: "789 City Avenue",
+          city: "New York",
+          country: "USA",
+          rating: 4.0,
+          total_reviews: 650,
+          amenities: ["Free Breakfast", "Parking", "Pet Friendly", "Free WiFi"],
+          couple_friendly: false,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjMTBCOTgxIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiPkNpdHkgQ29tZm9ydDwvdGV4dD4KPC9zdmc+Cg==",
+        },
+      ]
+
+      for (const hotel of hotelData) {
+        await sql`
+          INSERT INTO hotels (name, description, location, address, city, country, rating, total_reviews, amenities, couple_friendly, image_url)
+          VALUES (${hotel.name}, ${hotel.description}, ${hotel.location}, ${hotel.address}, ${hotel.city}, ${hotel.country}, ${hotel.rating}, ${hotel.total_reviews}, ${hotel.amenities}, ${hotel.couple_friendly}, ${hotel.image_url})
+        `
+      }
+
+      console.log("✅ Sample hotels inserted")
+
+      // Insert sample rooms
+      console.log("🛏️ Inserting sample rooms...")
+
+      const roomData = [
+        {
+          hotel_id: 1,
+          room_type: "Standard Room",
+          description: "Comfortable room with city view",
+          price_per_night: 120.0,
+          max_occupancy: 2,
+          amenities: ["Free WiFi", "Air Conditioning", "TV"],
+          total_rooms: 20,
+          available_rooms: 15,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjM2NjZCIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+U3RhbmRhcmQgUm9vbTwvdGV4dD4KPC9zdmc+Cg==",
+        },
+        {
+          hotel_id: 1,
+          room_type: "Deluxe Suite",
+          description: "Spacious suite with premium amenities",
+          price_per_night: 250.0,
+          max_occupancy: 4,
+          amenities: ["Free WiFi", "Air Conditioning", "TV", "Mini Bar", "Balcony"],
+          total_rooms: 10,
+          available_rooms: 8,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRkVGM0M3Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTI0MDBEIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+RGVsdXhlIFN1aXRlPC90ZXh0Pgo8L3N2Zz4K",
+        },
+        {
+          hotel_id: 2,
+          room_type: "Ocean View Room",
+          description: "Room with stunning ocean views",
+          price_per_night: 200.0,
+          max_occupancy: 2,
+          amenities: ["Ocean View", "Free WiFi", "Air Conditioning", "TV"],
+          total_rooms: 30,
+          available_rooms: 25,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRENGREZGIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDc5MkVGIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+T2NlYW4gVmlldyBSb29tPC90ZXh0Pgo8L3N2Zz4K",
+        },
+        {
+          hotel_id: 2,
+          room_type: "Beach Villa",
+          description: "Private villa steps from the beach",
+          price_per_night: 400.0,
+          max_occupancy: 6,
+          amenities: ["Ocean View", "Private Beach", "Kitchen", "Free WiFi"],
+          total_rooms: 5,
+          available_rooms: 3,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRkVGM0M3Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRUE1ODA2IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+QmVhY2ggVmlsbGE8L3RleHQ+Cjwvc3ZnPgo=",
+        },
+        {
+          hotel_id: 3,
+          room_type: "Standard Room",
+          description: "Clean and comfortable standard room",
+          price_per_night: 85.0,
+          max_occupancy: 2,
+          amenities: ["Free WiFi", "Air Conditioning", "TV"],
+          total_rooms: 40,
+          available_rooms: 35,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjM2NjZCIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+U3RhbmRhcmQgUm9vbTwvdGV4dD4KPC9zdmc+Cg==",
+        },
+        {
+          hotel_id: 3,
+          room_type: "Family Room",
+          description: "Spacious room perfect for families",
+          price_per_night: 120.0,
+          max_occupancy: 4,
+          amenities: ["Free WiFi", "Air Conditioning", "TV", "Microwave"],
+          total_rooms: 15,
+          available_rooms: 12,
+          image_url:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRkVGM0M3Ii8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTI0MDBEIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+RmFtaWx5IFJvb208L3RleHQ+Cjwvc3ZnPgo=",
+        },
+      ]
+
+      for (const room of roomData) {
+        await sql`
+          INSERT INTO rooms (hotel_id, room_type, description, price_per_night, max_occupancy, amenities, total_rooms, available_rooms, image_url)
+          VALUES (${room.hotel_id}, ${room.room_type}, ${room.description}, ${room.price_per_night}, ${room.max_occupancy}, ${room.amenities}, ${room.total_rooms}, ${room.available_rooms}, ${room.image_url})
+        `
+      }
+
+      console.log("✅ Sample rooms inserted")
+
+      // Insert sample reviews
+      console.log("⭐ Inserting sample reviews...")
+      await sql`
+        INSERT INTO reviews (user_id, hotel_id, rating, title, comment)
+        VALUES 
+        (1, 1, 5, 'Excellent stay!', 'The Grand Plaza Hotel exceeded all expectations. The service was impeccable and the amenities were top-notch.'),
+        (1, 2, 4, 'Beautiful ocean views', 'The Seaside Resort had stunning views and great beach access. Would definitely return!'),
+        (1, 3, 4, 'Good value for money', 'City Comfort Inn provided exactly what we needed at a reasonable price. Clean and comfortable.')
+      `
+      console.log("✅ Sample reviews inserted")
+    } else {
+      console.log("ℹ️ Sample data already exists, skipping insertion")
+    }
+
+    // Verify final state
+    const finalCounts = await sql`
+      SELECT 
+        (SELECT COUNT(*) FROM users) as users,
+        (SELECT COUNT(*) FROM hotels) as hotels,
+        (SELECT COUNT(*) FROM rooms) as rooms,
+        (SELECT COUNT(*) FROM bookings) as bookings,
+        (SELECT COUNT(*) FROM reviews) as reviews
     `
 
-    // Insert sample hotels
-    await sql`
-      INSERT INTO hotels (name, description, location, address, city, country, rating, total_reviews, amenities, couple_friendly, image_url) 
-      VALUES 
-      ('Grand Plaza Hotel', 'Luxury hotel in the heart of downtown with world-class amenities', 'Downtown', '123 Main Street', 'New York', 'USA', 4.5, 1250, ARRAY['Free WiFi', 'Pool', 'Spa', 'Gym', 'Restaurant'], true, '/placeholder.svg?height=200&width=300'),
-      ('Seaside Resort', 'Beautiful beachfront resort with stunning ocean views', 'Beachfront', '456 Ocean Drive', 'Miami', 'USA', 4.8, 890, ARRAY['Ocean View', 'Restaurant', 'Gym', 'Beach Access', 'Pool'], true, '/placeholder.svg?height=200&width=300'),
-      ('City Comfort Inn', 'Comfortable and affordable accommodation in midtown', 'Midtown', '789 City Avenue', 'New York', 'USA', 4.0, 650, ARRAY['Free Breakfast', 'Parking', 'Pet Friendly', 'Free WiFi'], false, '/placeholder.svg?height=200&width=300'),
-      ('Mountain View Lodge', 'Scenic mountain retreat perfect for nature lovers', 'Highlands', '321 Mountain Road', 'Denver', 'USA', 4.6, 420, ARRAY['Scenic Views', 'Fireplace', 'Hiking Trails', 'Restaurant'], true, '/placeholder.svg?height=200&width=300'),
-      ('Urban Boutique Hotel', 'Stylishly designed boutique hotel in the trendy arts district', 'Arts District', '654 Art Street', 'Los Angeles', 'USA', 4.7, 780, ARRAY['Rooftop Bar', 'Art Gallery', 'Concierge', 'Free WiFi'], true, '/placeholder.svg?height=200&width=300'),
-      ('Budget Stay Inn', 'Clean and comfortable budget accommodation', 'Suburb', '987 Budget Lane', 'Phoenix', 'USA', 3.8, 320, ARRAY['Budget Friendly', '24/7 Reception', 'Free Parking', 'Free WiFi'], false, '/placeholder.svg?height=200&width=300')
-      ON CONFLICT DO NOTHING
-    `
+    console.log("📋 Final counts:", finalCounts[0])
 
-    // Insert sample rooms for each hotel
-    await sql`
-      INSERT INTO rooms (hotel_id, room_type, description, price_per_night, max_occupancy, amenities, total_rooms, available_rooms) 
-      VALUES 
-      (1, 'Standard Room', 'Comfortable room with city view', 120.00, 2, ARRAY['Free WiFi', 'Air Conditioning', 'TV'], 20, 15),
-      (1, 'Deluxe Suite', 'Spacious suite with premium amenities', 250.00, 4, ARRAY['Free WiFi', 'Air Conditioning', 'TV', 'Mini Bar', 'Balcony'], 10, 8),
-      (2, 'Ocean View Room', 'Room with stunning ocean views', 200.00, 2, ARRAY['Ocean View', 'Free WiFi', 'Air Conditioning', 'TV'], 30, 25),
-      (2, 'Beach Villa', 'Private villa steps from the beach', 400.00, 6, ARRAY['Ocean View', 'Private Beach', 'Kitchen', 'Free WiFi'], 5, 3),
-      (3, 'Standard Room', 'Clean and comfortable standard room', 85.00, 2, ARRAY['Free WiFi', 'Air Conditioning', 'TV'], 40, 35),
-      (3, 'Family Room', 'Spacious room perfect for families', 120.00, 4, ARRAY['Free WiFi', 'Air Conditioning', 'TV', 'Microwave'], 15, 12),
-      (4, 'Mountain View Room', 'Room with breathtaking mountain views', 150.00, 2, ARRAY['Mountain View', 'Fireplace', 'Free WiFi'], 25, 20),
-      (4, 'Luxury Cabin', 'Private cabin with full amenities', 300.00, 6, ARRAY['Mountain View', 'Fireplace', 'Kitchen', 'Hot Tub'], 8, 6),
-      (5, 'Designer Room', 'Stylishly designed room with modern amenities', 175.00, 2, ARRAY['Free WiFi', 'Air Conditioning', 'TV', 'Mini Bar'], 20, 18),
-      (5, 'Penthouse Suite', 'Luxury penthouse with rooftop access', 500.00, 4, ARRAY['Rooftop Access', 'Free WiFi', 'Kitchen', 'Balcony'], 3, 2),
-      (6, 'Economy Room', 'Basic but clean accommodation', 65.00, 2, ARRAY['Free WiFi', 'Air Conditioning', 'TV'], 50, 45),
-      (6, 'Standard Room', 'Comfortable room with standard amenities', 85.00, 3, ARRAY['Free WiFi', 'Air Conditioning', 'TV', 'Microwave'], 20, 18)
-      ON CONFLICT DO NOTHING
-    `
-
-    // Insert sample reviews
-    await sql`
-      INSERT INTO reviews (user_id, hotel_id, rating, title, comment)
-      VALUES 
-      (1, 1, 5, 'Excellent stay!', 'The Grand Plaza Hotel exceeded all expectations. The service was impeccable and the amenities were top-notch.'),
-      (1, 2, 4, 'Beautiful ocean views', 'The Seaside Resort had stunning views and great beach access. Would definitely return!'),
-      (1, 3, 4, 'Good value for money', 'City Comfort Inn provided exactly what we needed at a reasonable price. Clean and comfortable.')
-      ON CONFLICT DO NOTHING
-    `
-
-    return NextResponse.json({ message: "Database initialized successfully with sample user" })
+    return NextResponse.json({
+      success: true,
+      message: "Database initialized successfully",
+      counts: finalCounts[0],
+    })
   } catch (error) {
-    console.error("Error initializing database:", error)
-    return NextResponse.json({ error: "Failed to initialize database", details: error.message }, { status: 500 })
+    console.error("❌ Error initializing database:", error)
+
+    // Return detailed error information
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to initialize database",
+        details: error.message,
+        name: error.name,
+        code: error.code,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      },
+      { status: 500 },
+    )
   }
 }

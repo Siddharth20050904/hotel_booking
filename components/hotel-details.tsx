@@ -51,6 +51,74 @@ interface Hotel {
   reviews: Review[]
 }
 
+// Helper component for images with fallback
+function HotelImage({ src, alt, className, ...props }: any) {
+  const [imgSrc, setImgSrc] = useState(src)
+  const [hasError, setHasError] = useState(false)
+
+  const handleError = () => {
+    setHasError(true)
+    // Use a data URL for a simple placeholder
+    setImgSrc(
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgMTI1SDE4NVYxMzVIMTc1VjEyNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHA+dGggZD0iTTE5NSAxMjVIMjI1VjEzNUgxOTVWMTI1WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTc1IDE0NUgxODVWMTU1SDE3NVYxNDVaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0xOTUgMTQ1SDIyNVYxNTVIMTk1VjE0NVoiIGZpbGw9IiM5Q0EzQUYiLz4KPHA+dGggZD0iTTE3NSAxNjVIMTg1VjE3NUgxNzVWMTY1WiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTk1IDE2NUgyMjVWMTc1SDE5NVYxNjVaIiBmaWxsPSIjOUNBM0FGIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMjAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOUNBM0FGIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+SG90ZWwgSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=",
+    )
+  }
+
+  return (
+    <div className={className} {...props}>
+      {hasError ? (
+        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-4xl mb-2">🏨</div>
+            <div className="text-sm">Hotel Image</div>
+          </div>
+        </div>
+      ) : (
+        <Image
+          src={imgSrc || "/placeholder.svg"}
+          alt={alt}
+          fill
+          className="object-cover"
+          onError={handleError}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      )}
+    </div>
+  )
+}
+
+// Helper component for room images
+function RoomImage({ src, alt, className, ...props }: any) {
+  const [imgSrc, setImgSrc] = useState(src)
+  const [hasError, setHasError] = useState(false)
+
+  const handleError = () => {
+    setHasError(true)
+  }
+
+  return (
+    <div className={className} {...props}>
+      {hasError ? (
+        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-3xl mb-1">🛏️</div>
+            <div className="text-xs">Room Image</div>
+          </div>
+        </div>
+      ) : (
+        <Image
+          src={imgSrc || "/placeholder.svg"}
+          alt={alt}
+          fill
+          className="object-cover"
+          onError={handleError}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      )}
+    </div>
+  )
+}
+
 export function HotelDetails({ hotelId }: { hotelId: string }) {
   const [hotel, setHotel] = useState<Hotel | null>(null)
   const [loading, setLoading] = useState(true)
@@ -126,15 +194,11 @@ export function HotelDetails({ hotelId }: { hotelId: string }) {
 
       {/* Hotel Header */}
       <div className="flex flex-col md:flex-row gap-6 mb-8">
-        <div className="relative w-full md:w-2/3 h-[300px] md:h-[400px] rounded-lg overflow-hidden">
-          <Image
-            src={hotel.image_url || "/placeholder.svg?height=400&width=600"}
-            alt={hotel.name}
-            fill
-            className="object-cover"
-          />
-          {hotel.couple_friendly && <Badge className="absolute top-4 right-4 bg-rose-500">Couple Friendly</Badge>}
-        </div>
+        <HotelImage
+          src={hotel.image_url}
+          alt={hotel.name}
+          className="relative w-full md:w-2/3 h-[300px] md:h-[400px] rounded-lg overflow-hidden"
+        />
 
         <div className="w-full md:w-1/3">
           <h1 className="text-3xl font-bold mb-2">{hotel.name}</h1>
@@ -152,10 +216,12 @@ export function HotelDetails({ hotelId }: { hotelId: string }) {
             <span className="text-muted-foreground">({hotel.total_reviews} reviews)</span>
           </div>
 
+          {hotel.couple_friendly && <Badge className="mb-4 bg-rose-500">Couple Friendly</Badge>}
+
           <div className="mb-6">
             <h3 className="font-medium mb-2">Hotel Amenities</h3>
             <div className="flex flex-wrap gap-2">
-              {hotel.amenities.map((amenity) => (
+              {hotel.amenities?.map((amenity) => (
                 <Badge key={amenity} variant="outline" className="text-xs">
                   {amenity}
                 </Badge>
@@ -196,14 +262,7 @@ export function HotelDetails({ hotelId }: { hotelId: string }) {
             {hotel.rooms && hotel.rooms.length > 0 ? (
               hotel.rooms.map((room) => (
                 <Card key={room.id} className="overflow-hidden">
-                  <div className="relative h-48">
-                    <Image
-                      src={room.image_url || "/placeholder.svg?height=200&width=400"}
-                      alt={room.room_type}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
+                  <RoomImage src={room.image_url} alt={room.room_type} className="relative h-48" />
 
                   <CardContent className="pt-4">
                     <div className="flex justify-between items-start mb-2">
@@ -229,7 +288,7 @@ export function HotelDetails({ hotelId }: { hotelId: string }) {
                     <div className="mt-2">
                       <h4 className="text-sm font-medium mb-2">Room Amenities</h4>
                       <div className="flex flex-wrap gap-2">
-                        {room.amenities.map((amenity) => (
+                        {room.amenities?.map((amenity) => (
                           <Badge key={amenity} variant="secondary" className="text-xs">
                             {amenity}
                           </Badge>
