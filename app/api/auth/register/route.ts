@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
+    // Create user - let PostgreSQL auto-generate the ID
     const newUser = await sql`
       INSERT INTO users (email, first_name, last_name, password, preferred_currency, preferred_language)
       VALUES (${email}, ${firstName}, ${lastName}, ${hashedPassword}, 'USD', 'english')
@@ -43,6 +43,19 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error("Registration error:", error)
+
+    // Handle specific database constraint errors
+    if (error.code === "23505") {
+      if (error.constraint === "users_email_key") {
+        return NextResponse.json({ error: "User with this email already exists" }, { status: 400 })
+      } else if (error.constraint === "users_pkey") {
+        return NextResponse.json(
+          { error: "Registration failed due to database conflict. Please try again." },
+          { status: 400 },
+        )
+      }
+    }
+
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
   }
 }

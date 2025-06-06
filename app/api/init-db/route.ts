@@ -129,9 +129,20 @@ export async function POST() {
         INSERT INTO users (email, first_name, last_name, phone, id_type, id_number, preferred_currency, preferred_language, password) 
         VALUES ('demo@example.com', 'Demo', 'User', '+1-555-0123', 'passport', 'AB123456', 'USD', 'english', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBMY9f5zqiUm4W')
       `
-      console.log("✅ Demo user created")
+
+      // Reset the sequence to ensure new registrations work properly
+      await sql`
+        SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))
+      `
+
+      console.log("✅ Demo user created and sequence reset")
     } else {
       console.log("ℹ️ Demo user already exists")
+
+      // Still reset the sequence to be safe
+      await sql`
+        SELECT setval('users_id_seq', (SELECT MAX(id) FROM users))
+      `
     }
 
     // Insert sample hotels if none exist
@@ -231,7 +242,7 @@ export async function POST() {
           total_rooms: 30,
           available_rooms: 25,
           image_url:
-            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRENGREZGIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDc5MkVGIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+T2NlYW4gVmlldyBSb29tPC90ZXh0Pgo8L3N2Zz4K",
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDQwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LmczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRENGREZGIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDc5MkVGIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiI+T2NlYW4gVmlldyBSb29tPC90ZXh0Pgo8L3N2Zz4K",
         },
         {
           hotel_id: 2,

@@ -47,6 +47,25 @@ export function DebugPanel() {
     }
   }
 
+  const repairSequences = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch("/api/repair-sequences", { method: "POST" })
+      const text = await response.text()
+
+      try {
+        const data = JSON.parse(text)
+        setTestResult(`Sequence Repair:\n${JSON.stringify(data, null, 2)}`)
+      } catch (parseError) {
+        setTestResult(`Sequence Repair Raw Response:\n${text}`)
+      }
+    } catch (error) {
+      setTestResult(`Sequence Repair Error: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const testHotelsAPI = async () => {
     setLoading(true)
     try {
@@ -88,6 +107,9 @@ export function DebugPanel() {
           </Button>
           <Button onClick={initializeDatabase} disabled={loading} size="sm">
             Initialize Database
+          </Button>
+          <Button onClick={repairSequences} disabled={loading} size="sm">
+            Repair Sequences
           </Button>
           <Button onClick={testHotelsAPI} disabled={loading} size="sm">
             Test Hotels API
